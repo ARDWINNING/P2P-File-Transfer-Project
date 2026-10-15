@@ -1,6 +1,8 @@
 Team Members:
 - Alexander Winning
 - William Glynn
+- Lucas Benedict
+- Zachary Suero
 
 Checkpoint break down?
 1. Message protocol (handshake, encoding/decoding, configuration).
