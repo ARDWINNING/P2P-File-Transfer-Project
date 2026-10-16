@@ -1,8 +1,11 @@
 
 #include "logger.h"
+#include <ctime>
 #include <format>
+#include <iomanip>
 #include <mutex>
 #include <queue>
+#include <sstream>
 #include <stdexcept>
 
 Logger::Logger(uint32_t SelfID, const std::string& RootDir) : SID(SelfID), 
@@ -11,7 +14,6 @@ Logger::Logger(uint32_t SelfID, const std::string& RootDir) : SID(SelfID),
 		throw std::runtime_error("Could not open log_peer_" + std::to_string(SID) + ".log");
 	}
 	Worker = std::thread(&Logger::run, this);
-	//Something with Worker
 }
 
 Logger::~Logger(){
@@ -63,11 +65,16 @@ void Logger::run() {
 }
 
 std::string Logger::FormatEvent(const Event &E) const {
-	std::string prefix = "[" + std::format("{:%Y-%m-%d %H:%M:%S}", E.Time) + "]: ";
+	// Local time to the second. std::localtime's shared buffer is safe here:
+	// FormatEvent is only ever called from the single worker thread.
+	std::time_t t = std::chrono::system_clock::to_time_t(E.Time);
+	std::ostringstream stamp;
+	stamp << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S");
+	std::string prefix = stamp.str() + ": ";
 
         auto it = LogFormats.find(E.Type);
         if (it == LogFormats.end()) {
-                return prefix + " Invalid log type " + E.Type;
+                return prefix + "Invalid log type " + E.Type;
         }
 
         try {
@@ -76,9 +83,8 @@ std::string Logger::FormatEvent(const Event &E) const {
                         for (size_t i = 0; i < E.Arguments.size(); ++i) {
                                 if (i > 0) {
 					joined += ',';
-				} else {
-                                	joined += std::to_string(E.Arguments[i]);
 				}
+                                joined += std::to_string(E.Arguments[i]);
                         }
                         return prefix + std::vformat(it->second, std::make_format_args(SID, joined));
                 }
@@ -91,4 +97,18 @@ std::string Logger::FormatEvent(const Event &E) const {
                 return prefix + "bad arguments for " + E.Type;
         }
 }
+
+void Logger::logMadeConnection(uint32_t PeerID) { log("MadeConnection", {PeerID}); }
+void Logger::logConnectedFrom(uint32_t PeerID) { log("ConnectedFrom", {PeerID}); }
+void Logger::logPreferredNeighbors(const std::vector<uint32_t>& PeerIDs) { log("PreferredNeighbors", PeerIDs); }
+void Logger::logOptimisticUnchoke(uint32_t PeerID) { log("OptimisticUnchoke", {PeerID}); }
+void Logger::logUnchokedBy(uint32_t PeerID) { log("Unchoked", {PeerID}); }
+void Logger::logChokedBy(uint32_t PeerID) { log("Choked", {PeerID}); }
+void Logger::logReceivedHave(uint32_t PeerID, uint32_t PieceIndex) { log("ReceivedHave", {PeerID, PieceIndex}); }
+void Logger::logReceivedInterested(uint32_t PeerID) { log("ReceivedInterested", {PeerID}); }
+void Logger::logReceivedNotInterested(uint32_t PeerID) { log("ReceivedNotInterested", {PeerID}); }
+void Logger::logDownloadedPiece(uint32_t PeerID, uint32_t PieceIndex, uint32_t PieceCount) {
+	log("DownloadedPiece", {PeerID, PieceIndex, PieceCount});
+}
+void Logger::logDownloadComplete() { log("DownloadComplete"); }
 
