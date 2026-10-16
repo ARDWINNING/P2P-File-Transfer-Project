@@ -34,11 +34,25 @@ struct Event {
 };
 
 class Logger {
-	Logger(uint32_t SelfID, const std::string& RootDir);
+public:
+	Logger(uint32_t SelfID, const std::string& RootDir = ".");
 
 	~Logger();
 
 	void log(std::string Type, std::vector<uint32_t> Arguments = {});
+
+	// Typed wrappers around log(), one per required event.
+	void logMadeConnection(uint32_t PeerID);      // we connected to PeerID
+	void logConnectedFrom(uint32_t PeerID);       // PeerID connected to us
+	void logPreferredNeighbors(const std::vector<uint32_t>& PeerIDs);
+	void logOptimisticUnchoke(uint32_t PeerID);
+	void logUnchokedBy(uint32_t PeerID);
+	void logChokedBy(uint32_t PeerID);
+	void logReceivedHave(uint32_t PeerID, uint32_t PieceIndex);
+	void logReceivedInterested(uint32_t PeerID);
+	void logReceivedNotInterested(uint32_t PeerID);
+	void logDownloadedPiece(uint32_t PeerID, uint32_t PieceIndex, uint32_t PieceCount);
+	void logDownloadComplete();
 
 private:
 	std::string FormatEvent(const Event& E) const;
