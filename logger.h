@@ -11,7 +11,7 @@
 #include <fstream>
 #include <string_view>
 #include <unordered_map>
-
+#include <condition_variable>
 
 inline const std::unordered_map<std::string_view, std::string_view> LogFormats = {
 	{"MadeConnection",        "Peer {0} makes a connection to Peer {1}."},
@@ -34,7 +34,7 @@ struct Event {
 };
 
 class Logger {
-	Logger(uint32_t SelfID, const std::string& Dir);
+	Logger(uint32_t SelfID, const std::string& RootDir);
 
 	~Logger();
 
@@ -45,8 +45,10 @@ private:
 	void run();
 
 	uint32_t SID;
+	std::ofstream Out;
 	std::queue<Event> Queue;
 	std::mutex Mutex;
+	std::condition_variable Ready;
 	bool Stopping = false;
 	std::thread Worker;
 };
